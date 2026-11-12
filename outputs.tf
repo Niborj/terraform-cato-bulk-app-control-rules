@@ -22,3 +22,8 @@ output "unordered_rules" {
   description = "rules_in_sections rows excluded from cato_bulk_apc_move_rule (no managed section to order within)."
   value       = local.unordered_rules_data
 }
+
+output "skipped_rules" {
+  description = "Rules NOT created because their application selection (applicationType/applicationCriteria) has no provider surface -- creating them would silently broaden scope. Map of rule name => reason."
+  value       = local.skipped_rules
+}
