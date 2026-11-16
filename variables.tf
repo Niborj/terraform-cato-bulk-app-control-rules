@@ -3,6 +3,18 @@ variable "apc_rules_json_file_path" {
   type        = string
 }
 
+variable "policy_enabled" {
+  description = "Manage the account-level Application Control policy toggle. null leaves the toggle unmanaged; true/false manages it via cato_application_control_policy."
+  type        = bool
+  default     = null
+}
+
+variable "policy_data_control_enabled" {
+  description = "Data Control sub-toggle for the account-level Application Control policy. Only used when policy_enabled is non-null (the cato_application_control_policy resource requires both enabled and data_control_enabled). Defaults to false."
+  type        = bool
+  default     = false
+}
+
 variable "allow_empty_policy" {
   type        = bool
   default     = false

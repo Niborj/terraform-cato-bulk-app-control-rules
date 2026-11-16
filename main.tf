@@ -304,6 +304,16 @@ resource "terraform_data" "guard_empty_policy" {
   }
 }
 
+# Optional account-level policy toggle. null leaves the toggle unmanaged (count 0);
+# true/false manages the account-wide Application Control enable/disable state. The
+# provider requires data_control_enabled alongside enabled, so the optional
+# policy_data_control_enabled variable (default false) supplies it.
+resource "cato_application_control_policy" "policy" {
+  count                = var.policy_enabled == null ? 0 : 1
+  enabled              = var.policy_enabled
+  data_control_enabled = var.policy_data_control_enabled
+}
+
 resource "cato_application_control_section" "sections" {
   for_each = local.sections_data
   at = {
@@ -336,6 +346,15 @@ resource "cato_application_control_rule" "rules" {
     each.value.rule.ruleType == "DATA" ? { data_rule = local.typed_rule_bodies[each.key] } : {},
     each.value.rule.ruleType == "FILE" ? { file_rule = local.typed_rule_bodies[each.key] } : {}
   )
+
+  # `at` is a create-time positioning directive; actual ordering is owned by
+  # cato_bulk_apc_move_rule. On brownfield import the provider hydrates `at` as
+  # LAST_IN_POLICY (it can't recover the original directive), so a rule placed in
+  # a named section (LAST_IN_SECTION) shows a phantom diff on every import.
+  # Ignore post-create `at` changes -- ordering is reconciled by the move resource.
+  lifecycle {
+    ignore_changes = [at]
+  }
 }
 
 # Ordering + republish on changes.

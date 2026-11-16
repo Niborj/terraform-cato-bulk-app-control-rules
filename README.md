@@ -1,5 +1,12 @@
 # terraform-cato-bulk-app-control-rules
 
+> [!IMPORTANT]
+> **Early access (beta).** This module targets the Cato Terraform provider
+> `2.0.0-prerelease.1`, an **early-access / beta** release. A general-availability
+> (GA) release is planned shortly, following the current evaluation period.
+> Until GA ships, pin the exact prerelease version.
+
+
 Bulk-manages the Cato **Application Control (CASB — applicationControl)**
 policy from a single JSON export: sections and rules (flat policy — no
 sub-policies exist for this type), with ordering and publishing via
@@ -92,6 +99,13 @@ move resource — their order is creation order, and they're surfaced via the
 
 - `apc_rules_json_file_path` — path to the Application Control JSON export
   produced by `catocli export apc_rules` (required)
+- `policy_enabled` — optional account-level policy toggle; `null` (default)
+  leaves it unmanaged (resource not created), `true`/`false` manages it via
+  `cato_application_control_policy`
+- `policy_data_control_enabled` — optional Data Control sub-toggle (default
+  `false`); only used when `policy_enabled` is non-null, since the provider's
+  `cato_application_control_policy` requires both `enabled` and
+  `data_control_enabled`
 - `allow_empty_policy` — safety guard: set `true` to allow planning against a
   0-rule policy JSON (intentional greenfield/teardown only); defaults to
   `false` so a truncated or wrong-tenant export can't destroy a live policy
@@ -297,13 +311,13 @@ output "unordered_rules_report" {
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.5.0 |
-| <a name="requirement_cato"></a> [cato](#requirement\_cato) | >= 1.3.1 |
+| <a name="requirement_cato"></a> [cato](#requirement\_cato) | >= 2.0.0-prerelease.1 |
 
 ## Providers
 
 | Name | Version |
 |------|---------|
-| <a name="provider_cato"></a> [cato](#provider\_cato) | 1.3.1 |
+| <a name="provider_cato"></a> [cato](#provider\_cato) | >= 2.0.0-prerelease.1 |
 | <a name="provider_terraform"></a> [terraform](#provider\_terraform) | n/a |
 
 ## Modules
@@ -324,6 +338,8 @@ No modules.
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
 | <a name="input_allow_empty_policy"></a> [allow\_empty\_policy](#input\_allow\_empty\_policy) | Safety guard: fail planning when the policy JSON contains 0 rules unless explicitly allowed. Protects against a truncated or wrong-tenant export destroying the live policy. Set true only for intentional greenfield/teardown. | `bool` | `false` | no |
+| <a name="input_policy_enabled"></a> [policy\_enabled](#input\_policy\_enabled) | Manage the account-level Application Control policy toggle. null leaves the toggle unmanaged; true/false manages it via cato\_application\_control\_policy. | `bool` | `null` | no |
+| <a name="input_policy_data_control_enabled"></a> [policy\_data\_control\_enabled](#input\_policy\_data\_control\_enabled) | Data Control sub-toggle for the account-level Application Control policy. Only used when policy\_enabled is non-null (the cato\_application\_control\_policy resource requires both enabled and data\_control\_enabled). Defaults to false. | `bool` | `false` | no |
 | <a name="input_apc_rules_json_file_path"></a> [apc\_rules\_json\_file\_path](#input\_apc\_rules\_json\_file\_path) | Path to the Application Control JSON export produced by `catocli export apc_rules` (data.policy.applicationControl.policy root). | `string` | n/a | yes |
 
 ## Outputs
