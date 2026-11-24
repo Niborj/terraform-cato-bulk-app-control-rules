@@ -95,10 +95,17 @@ locals {
       ))
     )
   }
+  # A FILE rule whose export carries no selector is "Any Application" in the
+  # CMA: the API reads that choice back as an all-null application, and the
+  # provider sends it as `application = {}` (valid for FILE rules only). Only
+  # APPLICATION/DATA rules without a selector are genuinely unrepresentable.
+  rule_is_file = {
+    for name, rw in local.rules_by_name : name => rw.rule.ruleType == "FILE"
+  }
   skipped_rules = {
     for name, v in local.active_variant :
     name => "no application selector in export (needs one of application/customApp/appCategory/customCategory/sanctionedAppsCategory/applicationType) -- creating it would silently broaden scope"
-    if !local.rule_app_named[name]
+    if !local.rule_app_named[name] && !local.rule_is_file[name]
   }
   deployable_rules_by_name = {
     for name, rw in local.rules_by_name : name => rw
@@ -211,7 +218,7 @@ locals {
           try(v.application.sanctionedAppsCategory, null) != null ? { sanctioned_apps_category = [for x in [v.application.sanctionedAppsCategory] : can(x.name) ? { name = x.name } : { id = x.id }] } : {},
           length(try(v.application.applicationType, [])) > 0 ? { application_type = v.application.applicationType } : {}
         )
-      } : {},
+      } : (local.rule_is_file[name] ? { application = {} } : {}),
       try(length(v.applicationActivity), 0) > 0 ? {
         # Activities are the one EXCEPTION to the name-first convention: their
         # ids are CATALOG-GLOBAL (identical across tenants, e.g.
@@ -257,8 +264,11 @@ locals {
           } : {}
         )
       } : {},
-      !local.rule_criteria_trivial[name] ? {
-        application_criteria_satisfy = try(v.applicationCriteriaSatisfy, "ALL")
+      # Carry the source's satisfy value even when the criteria are trivial:
+      # otherwise the provider defaults it to ALL and the copy differs from the
+      # source (every rule in a CMA-built policy reads back as ANY).
+      try(v.applicationCriteriaSatisfy, null) != null ? {
+        application_criteria_satisfy = v.applicationCriteriaSatisfy
       } : {},
       try(length(v.actionConfig.userNotification), 0) > 0 ? {
         action_config = {
@@ -309,8 +319,8 @@ resource "terraform_data" "guard_empty_policy" {
 # provider requires data_control_enabled alongside enabled, so the optional
 # policy_data_control_enabled variable (default false) supplies it.
 resource "cato_application_control_policy" "policy" {
-  count                = var.policy_enabled == null ? 0 : 1
-  enabled              = var.policy_enabled
+  count   = var.policy_enabled == null ? 0 : 1
+  enabled = var.policy_enabled
   # the provider attribute is an enum ("ENABLED"/"DISABLED"), not a bool
   data_control_enabled = var.policy_data_control_enabled ? "ENABLED" : "DISABLED"
 }
