@@ -311,7 +311,8 @@ resource "terraform_data" "guard_empty_policy" {
 resource "cato_application_control_policy" "policy" {
   count                = var.policy_enabled == null ? 0 : 1
   enabled              = var.policy_enabled
-  data_control_enabled = var.policy_data_control_enabled
+  # the provider attribute is an enum ("ENABLED"/"DISABLED"), not a bool
+  data_control_enabled = var.policy_data_control_enabled ? "ENABLED" : "DISABLED"
 }
 
 resource "cato_application_control_section" "sections" {
